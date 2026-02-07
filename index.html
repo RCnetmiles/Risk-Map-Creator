@@ -35,6 +35,21 @@
             pointer-events: none;
             line-height: 1; /* Reset line height for the emoji itself */
         }
+        
+        /* Ensure images inside cells fit perfectly */
+        .cell-content img {
+            width: 80%;
+            height: 80%;
+            object-fit: contain;
+        }
+
+        /* NEW: Fix for Palette Images to prevent cutting off */
+        .build-btn img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            display: block;
+        }
 
         .palette-scroll::-webkit-scrollbar {
             width: 6px;
@@ -114,6 +129,73 @@
 </head>
 <body class="bg-gray-50 h-screen w-screen flex flex-col overflow-hidden font-sans text-slate-800">
 
+    <!-- WELCOME / HELP MODAL -->
+    <div id="welcome-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm transition-opacity">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
+            <div class="bg-[#003366] p-4 flex items-center justify-between shrink-0">
+                <h2 class="text-white font-bold text-lg flex items-center gap-2">
+                    <span>📋</span> Instruções
+                </h2>
+                <!-- Close X for convenience -->
+                <button onclick="toggleModal(false)" class="text-white/70 hover:text-white font-bold text-xl">&times;</button>
+            </div>
+            
+            <div class="p-6 overflow-y-auto">
+                <ul class="space-y-4 text-gray-700 text-sm leading-relaxed">
+                    <li class="flex gap-3">
+                        <span class="text-2xl">🗺️</span>
+                        <div>
+                            <strong class="block text-gray-900">Abra o mapa</strong>
+                            A grade quadriculada é a sua área de trabalho.
+                        </div>
+                    </li>
+                    <li class="flex gap-3">
+                        <span class="text-2xl">🏗️</span>
+                        <div>
+                            <strong class="block text-gray-900">Vá para Construir</strong>
+                            Desenhe paredes, bancadas e todo o laboratório como preferir selecionando os itens na paleta.
+                        </div>
+                    </li>
+                    <li class="flex gap-3">
+                        <span class="text-2xl">🧪</span>
+                        <div>
+                            <strong class="block text-gray-900">Para amostras (Insumos)</strong>
+                            Ao clicar com uma amostra (Risco Biológico ou Químico) em uma bancada, armário ou freezer, ela irá <strong>mesclar</strong> com o componente e ficará armazenada.
+                        </div>
+                    </li>
+                    <li class="flex gap-3">
+                        <span class="text-2xl">⚠️</span>
+                        <div>
+                            <strong class="block text-gray-900">Troque para Legendar</strong>
+                            Adicione os círculos de risco sobre o mapa para classificar as áreas perigosas.
+                        </div>
+                    </li>
+                    <li class="flex gap-3">
+                        <span class="text-2xl">🔍</span>
+                        <div>
+                            <strong class="block text-gray-900">Navegação</strong>
+                            Use <strong>Zoom</strong> e <strong>Pan</strong> (arrastar) para ajustar a vista conforme necessário.
+                        </div>
+                    </li>
+                    <li class="flex gap-3">
+                        <span class="text-2xl">📷</span>
+                        <div>
+                            <strong class="block text-gray-900">Finalizar</strong>
+                            Use o botão <strong>Baixar</strong> para salvar o mapa. <br>
+                            <span class="text-gray-500 text-xs mt-1 block">Atenção: A imagem salva corresponderá exatamente ao <strong>zoom e enquadramento</strong> que estiverem visíveis na sua tela. Ajuste a visualização antes de baixar para capturar a área desejada.</span>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+
+            <div class="p-4 border-t border-gray-100 bg-gray-50 flex justify-end shrink-0">
+                <button onclick="toggleModal(false)" class="bg-[#003366] hover:bg-blue-800 text-white font-bold py-2 px-6 rounded-lg shadow-lg transform transition active:scale-95 flex items-center gap-2">
+                    Prosseguir ao editor <span>🚀</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- HEADER -->
     <header class="flex items-center justify-between px-4 py-3 shadow-md z-30 shrink-0 bg-[#003366]">
         <div class="flex items-center gap-2">
@@ -123,9 +205,14 @@
                 <p class="text-blue-200 text-xs">Desenhe e Legende seu Mapa</p>
             </div>
         </div>
-        <button id="btn-download" class="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-sm font-bold transition-colors shadow-sm active:scale-95">
-            <span>📷</span> Baixar
-        </button>
+        <div class="flex items-center gap-2">
+            <button id="btn-download" class="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-sm font-bold transition-colors shadow-sm active:scale-95">
+                <span>📷</span> Baixar
+            </button>
+            <button onclick="toggleModal(true)" class="flex items-center justify-center w-8 h-8 bg-blue-500 hover:bg-blue-600 text-white rounded-full font-bold shadow-sm active:scale-95" title="Ajuda / Instruções">
+                ?
+            </button>
+        </div>
     </header>
 
     <!-- LAYOUT WRAPPER (Handles Portrait vs Landscape switch) -->
@@ -238,10 +325,32 @@
             
             // Equipment
             { id: 'sink', name: 'Pia', category: 'EQUIPAMENTOS', icon: '🚰', color: 'bg-cyan-100' },
-            { id: 'fume_hood', name: 'Capela', category: 'EQUIPAMENTOS', icon: '💨', color: 'bg-blue-200' },
+            // Fume Hood with Image
+            { 
+                id: 'fume_hood', 
+                name: 'Capela', 
+                category: 'EQUIPAMENTOS', 
+                icon: '<img src="https://cdn-icons-png.flaticon.com/512/11318/11318229.png" alt="Capela">', 
+                color: 'bg-blue-200' 
+            },
+            // Autoclave with Image
+            { 
+                id: 'autoclave', 
+                name: 'Autoclave', 
+                category: 'EQUIPAMENTOS', 
+                icon: '<img src="https://cdn-icons-png.flaticon.com/512/1686/1686363.png" alt="Autoclave">', 
+                color: 'bg-indigo-100' 
+            },
             { id: 'chair', name: 'Cadeira', category: 'EQUIPAMENTOS', icon: '🪑', color: 'bg-slate-200' },
             { id: 'cabinet', name: 'Armário', category: 'EQUIPAMENTOS', icon: '🗄️', color: 'bg-amber-100' },
-            { id: 'freezer', name: 'Geladeira', category: 'EQUIPAMENTOS', icon: '❄️', color: 'bg-gray-200' },
+            // Freezer with New Icon
+            { 
+                id: 'freezer', 
+                name: 'Geladeira', 
+                category: 'EQUIPAMENTOS', 
+                icon: '<img src="https://cdn-icons-png.freepik.com/256/1084/1084031.png?semt=ais_white_label" alt="Geladeira">', 
+                color: 'bg-gray-200' 
+            },
             { id: 'trash', name: 'Lixo', category: 'EQUIPAMENTOS', icon: '🗑️', color: 'bg-red-100' },
             
             // Insumos (New Category)
@@ -254,7 +363,7 @@
         ];
 
         // Items that can serve as a base for merging (furniture)
-        const MERGEABLE_BASES = ['bench', 'cabinet', 'fume_hood', 'sink', 'freezer'];
+        const MERGEABLE_BASES = ['bench', 'cabinet', 'fume_hood', 'sink', 'freezer', 'autoclave'];
         // Items that can overlay (insumos)
         const OVERLAY_ITEMS = ['item_biological', 'item_chemical'];
 
@@ -293,6 +402,7 @@
             transform: document.getElementById('transform-container'),
             main: document.getElementById('main-container'),
             hint: document.getElementById('hint'),
+            modal: document.getElementById('welcome-modal'),
             
             // Palettes
             paletteContainer: document.getElementById('palette-container'),
@@ -322,6 +432,15 @@
             setupMouseEvents();
             setupButtons();
         }
+
+        // --- MODAL LOGIC ---
+        window.toggleModal = (show) => {
+            if (show) {
+                els.modal.classList.remove('opacity-0', 'pointer-events-none');
+            } else {
+                els.modal.classList.add('opacity-0', 'pointer-events-none');
+            }
+        };
 
         // --- RENDER LOGIC ---
         function renderGridCells() {
@@ -399,7 +518,16 @@
                     const btn = document.createElement('button');
                     btn.id = `tool-${item.id}`;
                     btn.className = "build-btn flex flex-col items-center p-3 rounded-lg border-2 border-gray-100 bg-white hover:border-gray-300 shadow-sm transition-all active:scale-95";
-                    btn.innerHTML = `<span class="text-3xl mb-1">${item.icon}</span><span class="text-sm font-semibold text-gray-700">${item.name}</span>`;
+                    
+                    // Improved logic for icon rendering in palette
+                    const iconDisplay = item.icon.includes('<img') 
+                        ? `<div class="w-8 h-8 flex items-center justify-center">${item.icon}</div>`
+                        : `<span class="text-3xl mb-1">${item.icon}</span>`;
+
+                    btn.innerHTML = `
+                        <div class="h-10 w-full flex items-center justify-center overflow-hidden mb-1">${iconDisplay}</div>
+                        <span class="text-sm font-semibold text-gray-700">${item.name}</span>
+                    `;
                     btn.onclick = () => selectBuildTool(item.id);
                     grid.appendChild(btn);
                 });
@@ -520,7 +648,7 @@
                     const newItem = BUILD_ITEMS.find(i => i.id === appState.selectedBuildTool);
                     const currentItem = appState.grid[index];
 
-                    // Merge Logic: If we are placing an overlay item (Chemical/Bio) onto a valid Base (Bench/Cabinet)
+                    // Merge Logic: If we are placing an overlay item (Chemical/Bio) onto a valid Base (Bench/Cabinet/Autoclave)
                     if (currentItem && MERGEABLE_BASES.includes(currentItem.id) && OVERLAY_ITEMS.includes(newItem.id)) {
                         appState.grid[index] = {
                             ...newItem, // Use the Insumo Icon/Name
